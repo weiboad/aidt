@@ -1,6 +1,6 @@
 Summary: Weibo adinf data transfer
 Name: aidt
-Version:
+Version:0.1.0
 Release:el6.5
 Group:Development/Tools
 License:BSD

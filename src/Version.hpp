@@ -1,10 +1,10 @@
 /// 该程序自动生成，禁止修改
 #ifndef AIDT_VERSION_HPP_
 #define AIDT_VERSION_HPP_
-#define VERSION ""
+#define VERSION "0.1.0"
 #define SOVERSION ""
-#define GIT_DIRTY "0"
-#define GIT_SHA1 "e5e1cae4"
-#define BUILD_ID "bpdev-1498210980"
-#define BUILD_TYPE "Debug"
+#define GIT_DIRTY "15"
+#define GIT_SHA1 "ea18965e"
+#define BUILD_ID "bpdev-1499321339"
+#define BUILD_TYPE "Release"
 #endif
