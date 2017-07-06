@@ -1,0 +1,19 @@
+# aidt config
+
+transfers:
+    - 
+     path: /tmp/test1
+     is_dir: true
+     is_binary: false
+     is_recursive: false
+     time_wait: 3
+     format: '%s'
+     topic_name: test
+    - 
+     path: /tmp/test2
+     is_dir: true
+     is_binary: false
+     is_recursive: false
+     time_wait: 3
+     format: %s
+     topic_name: test
