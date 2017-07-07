@@ -1,40 +1,33 @@
-INCLUDE_DIRECTORIES(./)
-INCLUDE_DIRECTORIES(./thridpart)
-LINK_DIRECTORIES(/usr/local/lib)
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -W -static-libstdc++")  
+cmake_minimum_required(VERSION 2.6)
+INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/src)
+INCLUDE_DIRECTORIES(${PROJECT_SOURCE_DIR}/src/thridpart)
+LINK_DIRECTORIES(${CMAKE_CURRENT_BINARY_DIR})
+
+SET(CMAKE_SOURCE_DIR .)
+SET(CMAKE_MODULE_PATH ${CMAKE_ROOT}/Modules ${CMAKE_SOURCE_DIR}/cmake/Modules
+                ${PROJECT_SOURCE_DIR}/Modules)
 
 configure_file (
 	"${PROJECT_SOURCE_DIR}/src/Version.hpp.in"	
 	"${PROJECT_SOURCE_DIR}/src/Version.hpp"	
 )
 
-configure_file (
-	"${PROJECT_SOURCE_DIR}/rpm/aidt.spec.in"	
-	"${PROJECT_SOURCE_DIR}/rpm/aidt.spec"	
-)
-
-configure_file (
-	"${PROJECT_SOURCE_DIR}/rpm/build_rpm.in"	
-	"${PROJECT_SOURCE_DIR}/rpm/build_rpm"	
-	@ONLY
-)
-
 SET(AIDT_SRC aidt.cpp
-	BootStrap.cpp	
-	App.cpp	
-	AdServer.cpp
-	Http.cpp
-	Http/HttpInterface.cpp
-	Http/Server.cpp
-	Http/Index.cpp
-	Http/Config.cpp
-	Http/Topic.cpp
-	Http/Message.cpp
-	McProcessor.cpp
-	HeadProcessor.cpp
-	Aims.cpp
-	Aims/Kafka/ProducerIn.cpp
-	Timer.cpp
+    BootStrap.cpp	
+    App.cpp	
+    AdServer.cpp
+    Http.cpp
+    Http/HttpInterface.cpp
+    Http/Server.cpp
+    Http/Index.cpp
+    Http/Config.cpp
+    Http/Topic.cpp
+    Http/Message.cpp
+    McProcessor.cpp
+    HeadProcessor.cpp
+    Aims.cpp
+    Aims/Kafka/ProducerIn.cpp
+    Timer.cpp
     App/Config.cpp
     App/ConfigPaser.cpp
     App/Message.cpp
@@ -44,14 +37,97 @@ SET(AIDT_SRC aidt.cpp
     thridpart/inotify/redblack.c
 )
 ADD_EXECUTABLE(aidt ${AIDT_SRC})
-TARGET_LINK_LIBRARIES(aidt libadbase.a 
-	libadbase_kafka.a
-	librdkafka++.a 
-	librdkafka.a 
-	libevent.a
-    libyaml-cpp.a
-	pthread
-	rt
-	z
-	)
-INSTALL(TARGETS aidt RUNTIME DESTINATION adinf/aidt/bin)
+
+# adbase
+FIND_PACKAGE( libadbase REQUIRED)
+MARK_AS_ADVANCED(
+LIBADBASE_INCLUDE_DIR
+LIBADBASE_LIBRARIES
+)
+IF (LIBADBASE_INCLUDE_DIR AND LIBADBASE_LIBRARIES)
+    MESSAGE(STATUS "Found libadbase libraries")
+    INCLUDE_DIRECTORIES(${LIBADBASE_INCLUDE_DIR})
+    MESSAGE( ${LIBADBASE_LIBRARIES} )
+    TARGET_LINK_LIBRARIES(aidt ${LIBADBASE_LIBRARIES} )
+ELSE (LIBADBASE_INCLUDE_DIR AND LIBADBASE_LIBRARIES)
+    MESSAGE(FATAL_ERROR "Failed to find libadbase libraries")
+ENDIF (LIBADBASE_INCLUDE_DIR AND LIBADBASE_LIBRARIES)
+
+# adbase_kafka
+FIND_PACKAGE( libadbase_kafka REQUIRED)
+MARK_AS_ADVANCED(
+LIBADBASE_KAFKA_INCLUDE_DIR
+LIBADBASE_KAFKA_LIBRARIES
+)
+IF (LIBADBASE_KAFKA_INCLUDE_DIR AND LIBADBASE_KAFKA_LIBRARIES)
+    MESSAGE(STATUS "Found libadbase_kafka libraries")
+    INCLUDE_DIRECTORIES(${LIBADBASE_KAFKA_INCLUDE_DIR})
+    MESSAGE( ${LIBADBASE_KAFKA_LIBRARIES} )
+    TARGET_LINK_LIBRARIES(aidt ${LIBADBASE_KAFKA_LIBRARIES} )
+ELSE (LIBADBASE_KAFKA_INCLUDE_DIR AND LIBADBASE_KAFKA_LIBRARIES)
+    MESSAGE(FATAL_ERROR "Failed to find libadbase_kafka libraries")
+ENDIF (LIBADBASE_KAFKA_INCLUDE_DIR AND LIBADBASE_KAFKA_LIBRARIES)
+
+# event
+FIND_PACKAGE( libevent REQUIRED)
+MARK_AS_ADVANCED(
+        LIBEVENT_INCLUDE_DIR
+        LIBEVENT_LIBRARIES
+)
+IF (LIBEVENT_INCLUDE_DIR AND LIBEVENT_LIBRARIES)
+        MESSAGE(STATUS "Found libevent libraries")
+        INCLUDE_DIRECTORIES(${LIBEVENT_INCLUDE_DIR})
+        MESSAGE( ${LIBEVENT_LIBRARIES} )
+        MESSAGE( ${LIBEVENT_STATIC_LIBRARIES} )
+        TARGET_LINK_LIBRARIES(aidt ${LIBEVENT_STATIC_LIBRARIES} )
+ELSE (LIBEVENT_INCLUDE_DIR AND LIBEVENT_LIBRARIES)
+        MESSAGE(FATAL_ERROR "Failed to find libevent libraries")
+ENDIF (LIBEVENT_INCLUDE_DIR AND LIBEVENT_LIBRARIES)
+
+# rdkafka++
+FIND_PACKAGE( librdkafka REQUIRED)
+MARK_AS_ADVANCED(
+        LIBRDKAFKA_INCLUDE_DIR
+        LIBRDKAFKA_LIBRARIES
+)
+IF (LIBRDKAFKA_INCLUDE_DIR AND LIBRDKAFKA_LIBRARIES)
+        MESSAGE(STATUS "Found librdkafka libraries")
+        INCLUDE_DIRECTORIES(${LIBRDKAFKA_INCLUDE_DIR})
+        MESSAGE( ${LIBRDKAFKA_LIBRARIES} )
+        TARGET_LINK_LIBRARIES(aidt ${LIBRDKAFKA_CPP_LIBRARIES} )
+        TARGET_LINK_LIBRARIES(aidt ${LIBRDKAFKA_LIBRARIES} )
+ELSE (LIBRDKAFKA_INCLUDE_DIR AND LIBRDKAFKA_LIBRARIES)
+        MESSAGE(FATAL_ERROR "Failed to find librdkafka libraries")
+ENDIF (LIBRDKAFKA_INCLUDE_DIR AND LIBRDKAFKA_LIBRARIES)
+
+# yaml-cpp
+FIND_PACKAGE( libyaml-cpp REQUIRED)
+MARK_AS_ADVANCED(
+        LIBYAMLCPP_INCLUDE_DIR
+        LIBYAMLCPP_LIBRARIES
+)
+IF (LIBYAMLCPP_INCLUDE_DIR AND LIBYAMLCPP_LIBRARIES)
+        MESSAGE(STATUS "Found libyaml-cpp libraries")
+        INCLUDE_DIRECTORIES(${LIBYAMLCPP_INCLUDE_DIR})
+        MESSAGE( ${LIBYAMLCPP_LIBRARIES} )
+        TARGET_LINK_LIBRARIES(aidt ${LIBYAMLCPP_LIBRARIES} )
+ELSE (LIBYAMLCPP_INCLUDE_DIR AND LIBYAMLCPP_LIBRARIES)
+        MESSAGE(FATAL_ERROR "Failed to find libyaml-cpp libraries")
+ENDIF (LIBYAMLCPP_INCLUDE_DIR AND LIBYAMLCPP_LIBRARIES)
+
+# pthread
+FIND_PACKAGE( libpthread REQUIRED)
+MARK_AS_ADVANCED(
+LIBPTHREAD_INCLUDE_DIR
+LIBPTHREAD_LIBRARIES
+)
+IF (LIBPTHREAD_INCLUDE_DIR AND LIBPTHREAD_LIBRARIES)
+    MESSAGE(STATUS "Found libpthread libraries")
+    INCLUDE_DIRECTORIES(${LIBPTHREAD_INCLUDE_DIR})
+    MESSAGE( ${LIBPTHREAD_LIBRARIES} )
+    TARGET_LINK_LIBRARIES(aidt ${LIBPTHREAD_LIBRARIES} )
+ELSE (LIBPTHREAD_INCLUDE_DIR AND LIBPTHREAD_LIBRARIES)
+    MESSAGE(FATAL_ERROR "Failed to find libpthread libraries")
+ENDIF (LIBPTHREAD_INCLUDE_DIR AND LIBPTHREAD_LIBRARIES)
+
+INSTALL(TARGETS aidt RUNTIME DESTINATION bin)
