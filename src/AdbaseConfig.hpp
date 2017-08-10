@@ -36,6 +36,8 @@ typedef struct adbaseConfig {
 	std::string pidFile;
 	int appid;
 	int macid;
+    int mallocTrimPad;
+    int mallocTrimInterval;
 	
 	// logging config
 	std::string logsDir;

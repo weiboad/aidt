@@ -49,6 +49,7 @@ void Timer::init() {
 	/// 一段时间后仅执行一次
 	//ADD_AFTER_TIMER(1 * 1000, one);
 	ADD_EVERY_TIMER(_configure->intervalSyncOffset, syncOffset);
+	ADD_EVERY_TIMER(_configure->mallocTrimInterval, mallocTrim);
 }
 
 // }}}
@@ -59,6 +60,13 @@ void Timer::syncOffset(void*) {
     if (_context->reader != nullptr) {
         _context->reader->save();
     }
+}
+
+// }}}
+// {{{ void Timer::mallocTrim()
+
+void Timer::mallocTrim(void*) {
+    adbase::mallocTrim(_configure->mallocTrimPad);
 }
 
 // }}}

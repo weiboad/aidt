@@ -13,6 +13,7 @@ public:
 	void init();
 	adbase::Timer* getTimer();
 	void syncOffset(void* args);
+	void mallocTrim(void* args);
 
 private:
 	/// 传输上下文指针

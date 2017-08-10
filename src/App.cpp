@@ -137,6 +137,8 @@ void App::loadConfig(adbase::IniConfig& config) {
 	LOAD_TIMER_CONFIG(SyncOffset);
 
     _configure->aidtConfig = config.getOption("system", "aidtConfig");
+    _configure->mallocTrimInterval = config.getOptionUint32("system", "mallocTrimInterval");
+    _configure->mallocTrimPad = config.getOptionUint32("system", "mallocTrimPad");
     _configure->messageQueueLimit = config.getOptionUint32("message", "queueLimit");
     _configure->messageSendError  = config.getOption("message", "sendError");
 
