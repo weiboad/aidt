@@ -7,7 +7,8 @@ namespace app {
 Watcher::Watcher(AdbaseConfig* config, std::shared_ptr<app::Config>& watcherConfig) :
     _configure(config),
     _watcherConfig(watcherConfig),
-    _running(true) {
+    _running(true),
+    _eventThreadNumber(0) {
 }
 
 // }}}
@@ -43,6 +44,8 @@ void Watcher::stop() {
 	eventItem.event = STOP;
 	_eventQueue.push(eventItem);
     LOG_DEBUG << "Wacher event stopping";
+    std::unique_lock<std::mutex> lk(_mut);
+    _dataCond.wait(lk, [this]{return (_eventThreadNumber == 0);});
 }
 
 // }}}
@@ -68,6 +71,7 @@ void Watcher::watcherThread(void *data) {
 // {{{ void Watcher::eventThread()
 
 void Watcher::eventThread(void *) {
+    _eventThreadNumber++;
     while (true) {
 		InotifyEvent item;
 		_eventQueue.waitPop(item);
@@ -95,9 +99,13 @@ void Watcher::eventThread(void *) {
 			_eventQueue.push(item);
 			_moveToHandler(item);
 		} else {
+            LOG_ERROR << "Stop watcher event thread";
             break; 
         }
     }
+    std::unique_lock<std::mutex> lk(_mut);
+    _eventThreadNumber--;
+    _dataCond.notify_all();
     LOG_DEBUG << "Watcher event thread stop.";
 }
 

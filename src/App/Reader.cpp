@@ -52,6 +52,11 @@ void Reader::clear(const InotifyEvent& event) {
 	}
 
 	if (_fdMap.find(event.origfile) != _fdMap.end()) {
+        FdItem item = _fdMap[event.origfile];
+        closeStream(item.fs);
+        if (item.fs != nullptr) {
+            delete item.fs;
+        }
 		_fdMap.erase(event.origfile);	
 		LOG_INFO << "Delete file `" << event.origfile << "`, offset map clear.";
 	}
@@ -208,35 +213,20 @@ void Reader::stop() {
 void Reader::readString(const InotifyEvent& event, const WatcherFileInfo& info, bool& isContinue) {
 	isContinue = false;
 	FdItem item;
-    LOG_INFO << "file " << event.origfile ; 
-	initStream(event, item);
-    FILE* fs;
-    LOG_TRACE << "Open fd origfile:" << event.origfile;
-    fs = fopen(event.origfile.c_str(), "r");
-
-    if (fs == nullptr) {
-        LOG_INFO << "Get file fd-stream fail, is nullptr, pathfile: " << event.origfile;
+    LOG_TRACE << "file " << event.origfile ; 
+	if (!initStream(event, item, info, isContinue)) {
         return;
     }
 
-    if (-1 == fseek(fs, item.offset, SEEK_SET)) {
-		LOG_INFO << "File seek fail, seek offset" << item.offset << ", origFile: " << event.origfile;
-        return;
-    }
+    std::filebuf* pbuf = item.fs->rdbuf();
+    pbuf->pubseekpos(item.offset);
     LOG_INFO << "file " << event.origfile << ", seek:" << item.offset;
+
 	size_t readSize = 0;
 	int lines = 0;
 	int nextchar;
 	adbase::Buffer buffer;
-    do {
-        nextchar = fgetc(fs);
-        if (nextchar == EOF) {
-            if (ferror(fs)) {
-                isContinue = true;
-                LOG_ERROR << "Read fgetc is error, origfile:" << event.origfile;
-            }
-            break;
-        }
+    while((nextchar = pbuf->sbumpc()) != EOF && _running) {
 		readSize++;
 		if (nextchar != '\n') {
 			buffer.append(&nextchar, 1);
@@ -264,8 +254,7 @@ void Reader::readString(const InotifyEvent& event, const WatcherFileInfo& info, 
 				break;
 			}
 		}
-    } while (!feof(fs) && _running);
-    fclose(fs);
+    }
 }
 
 // }}}
@@ -274,36 +263,28 @@ void Reader::readString(const InotifyEvent& event, const WatcherFileInfo& info, 
 void Reader::readBinary(const InotifyEvent& event, const WatcherFileInfo& info, bool& isContinue) {
 	isContinue = false;
 	FdItem item;
-	initStream(event, item);
-    FILE* fs;
-    LOG_TRACE << "Open fd origfile:" << event.origfile;
-    fs = fopen(event.origfile.c_str(), "rb");
-    if (fs == nullptr) {
-        LOG_INFO << "Get file fd-stream fail, is nullptr, pathfile: " << event.origfile;
+    LOG_INFO << "file " << event.origfile ; 
+	if (!initStream(event, item, info, isContinue)) {
         return;
     }
 
-	int lines = 0;
-    fseek(fs, item.offset, SEEK_SET);
-    if (-1 == fseek(fs, item.offset, SEEK_SET)) {
-		LOG_INFO << "File seek fail, seek offset" << item.offset << ", origFile: " << event.origfile;
-        return;
-    }
+    int lines = 0;
+    item.fs->seekg(item.offset, std::ios::beg);
     LOG_INFO << "file " << event.origfile << ", seek:" << item.offset;
 	while (_running) {
-		char lenBuf[sizeof(uint32_t)] = {0};
+        char lenBuf[sizeof(uint32_t)] = {0};
         uint32_t len = 0;
-		size_t lenr = fread(lenBuf, sizeof(lenBuf), sizeof(lenBuf), fs);
-        if (lenr == sizeof(lenBuf)) {
-			::memcpy(&len, lenBuf, sizeof len);
-			len = adbase::networkToHost32(len);
-		} else {
-			break;
-		}
-		
-		std::unique_ptr<char[]> data(new char[len]);
-        size_t lenrbody = fread(data.get(), len, len, fs); 
-		if (lenrbody == len) {
+        item.fs->read(lenBuf, sizeof(uint32_t));
+        if (item.fs->good() && item.fs->gcount() == sizeof(uint32_t)) {
+            ::memcpy(&len, lenBuf, sizeof len);
+            len = adbase::networkToHost32(len);
+        } else {
+            break;
+        }
+
+        std::unique_ptr<char[]> data(new char[len]);
+        item.fs->read(data.get(), len);
+        if (item.fs->good() && item.fs->gcount() == len) {
 			adbase::Buffer buffer;
 			buffer.append(data.get(), len);
 			if (!sendMessage(buffer, info)) {
@@ -313,20 +294,15 @@ void Reader::readBinary(const InotifyEvent& event, const WatcherFileInfo& info, 
 			item.offset += len + sizeof(uint32_t);
 			setFileOffset(const_cast<std::string&>(event.origfile), len + sizeof(uint32_t));
 			lines++;
-		} else {
-			break;
-		}
-        fseek(fs, item.offset, SEEK_SET);
-        if (-1 == fseek(fs, item.offset, SEEK_SET)) {
-            LOG_INFO << "File seek fail, seek offset" << item.offset << ", origFile: " << event.origfile;
-            return;
+        } else {
+            break;  
         }
-		if (lines > _configure->maxLines) { // 超过单次事件的行数
+        item.fs->seekg(item.offset, std::ios::beg);
+        if (lines > _configure->maxLines) { // 超过单次事件的行数
 			isContinue = true;
 			break;
-		}
+        }
 	}
-    fclose(fs);
 }
 
 // }}}
@@ -355,13 +331,25 @@ bool Reader::sendMessage(adbase::Buffer &msg, const WatcherFileInfo& info) {
 // }}}
 // {{{ bool Reader::initStream()
 
-void Reader::initStream(const InotifyEvent& event, FdItem& item) {
-	std::lock_guard<std::mutex> lk(_mut);
+bool Reader::initStream(const InotifyEvent& event, FdItem& item, const WatcherFileInfo& info, bool& isContinue) {
+    int currentTime = static_cast<uint32_t>(time(nullptr));
+    isContinue = false;
+    std::lock_guard<std::mutex> lk(_mut);
+
 	InotifyEvent tmpEvent = event;
+    if (_currentFdNum > _configure->maxfd) { // 如果已经到打开文件最大数，主动gc
+        LOG_TRACE << "Current not has enough fd, gc fd, max fd set is " << _configure->maxfd;
+        gcFstreamNonLock(1);
+    }
+    if (_currentFdNum > _configure->maxfd) {
+        LOG_TRACE << "open file max limit, pathfile: " << tmpEvent.origfile;
+        isContinue = true;
+        return false;
+    }
+
 	if (_aliasMap.find(tmpEvent.origfile) != _aliasMap.end()) {
 		tmpEvent.origfile = _aliasMap[tmpEvent.origfile];
 	}
-	
 	if (_fdMap.find(tmpEvent.origfile) == _fdMap.end()) {
 		LOG_INFO << "Can't find `" << tmpEvent.origfile << "` fd item, create new it";
 		item.pathfile = tmpEvent.pathfile;
@@ -370,8 +358,14 @@ void Reader::initStream(const InotifyEvent& event, FdItem& item) {
 	} else {
 		item = _fdMap[tmpEvent.origfile];
 	}
-
+    item.fs = openStream(tmpEvent.origfile, info, item.fs);
+    item.lastTime = currentTime;
 	_fdMap[tmpEvent.origfile] = item;
+    if (item.fs != nullptr) {
+        return true; 
+    }
+    LOG_INFO << "open file fail, pathfile: " << tmpEvent.origfile;
+    return false;
 }
 
 // }}}
@@ -388,6 +382,73 @@ void Reader::setFileOffset(std::string &pathFile, uint64_t offset) {
 	}
 	
 	_fdMap[pathFile] = item;
+}
+
+// }}}
+
+// {{{ void Reader::gcFstreamNonLock()
+
+void Reader::gcFstreamNonLock(int lifeTime) {
+    int currentTime = static_cast<uint32_t>(time(nullptr));
+    int count = 0;
+    for (auto &t : _fdMap) {
+        if (t.second.fs != nullptr && t.second.fs->is_open()) {
+            count++;
+        }
+        if (!t.second.lastTime || (currentTime - t.second.lastTime) < lifeTime || t.second.moveProtected) {
+            continue;
+        }
+        closeStream(t.second.fs);
+    }
+    _currentFdNum = count;
+}
+
+// }}}
+// {{{ void Reader::closeStream()
+
+void Reader::closeStream(std::fstream* fs) {
+    if (fs != nullptr && fs->is_open()) {
+        fs->close();
+    }
+}
+
+// }}}
+// {{{ std::fstream* Reader::openStream()
+
+std::fstream* Reader::openStream(const std::string& file, const WatcherFileInfo& info, std::fstream* stream) {
+    if (stream != nullptr && stream->is_open() && stream->good()) {
+        return stream;
+    }
+
+    if (stream != nullptr && !stream->good() && stream->is_open()) {
+        closeStream(stream);
+    }
+
+    if (stream == nullptr) {
+        if (info.isBinary) {
+            stream = new std::fstream(file, std::fstream::in | std::fstream::binary);
+        } else {
+            stream = new std::fstream(file, std::fstream::in);
+        }
+    } else {
+        if (info.isBinary) {
+            stream->open(file, std::fstream::in | std::fstream::binary);
+        } else {
+            stream->open(file, std::fstream::in);
+        }
+    }
+    _currentFdNum++;
+
+    if (!stream->good()) {
+        stream->close();
+    }
+    if (!stream->is_open()) {
+        if (stream != nullptr) {
+            delete stream;
+        }
+        stream = nullptr;
+    }
+    return stream;
 }
 
 // }}}

@@ -161,6 +161,9 @@ uint64_t App::getSeqId() {
 //{{{ bool App::checkValidTopicAndPartition()
 
 bool App::checkValidTopicAndPartition(const std::string& topicName, int partId) {
+    if (topicName.empty()) {
+        return false;
+    }
 	std::lock_guard<std::mutex> lk(_mut);
     if (_topics.find(topicName) == _topics.end()) {
         _topics = _aims->getProducer()->getTopics();

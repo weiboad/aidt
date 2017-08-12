@@ -56,7 +56,7 @@ void Timer::init() {
 // {{{ void Timer::syncOffset()
 
 void Timer::syncOffset(void*) {
-	LOG_INFO << "Timer " << "syncOffset";
+	LOG_TRACE << "Timer " << "syncOffset";
     if (_context->reader != nullptr) {
         _context->reader->save();
     }

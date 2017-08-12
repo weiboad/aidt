@@ -74,6 +74,8 @@ private:
 	std::string _dirTypeMoveFrom;
 	int _watcherNum;
 	mutable std::mutex _mut;
+    std::condition_variable _dataCond;
+    int _eventThreadNumber;
 	ReaderCallbackRead _readHandler;
 	ReaderCallbackClear _clearHandler;
 	ReaderCallbackMoveSelf _moveSelfHandler;
