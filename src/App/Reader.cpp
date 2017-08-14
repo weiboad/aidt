@@ -317,15 +317,13 @@ bool Reader::sendMessage(adbase::Buffer &msg, const WatcherFileInfo& info) {
                   << ", partId: " << partId;
         message = msg;
     } else {
-        message = msg;
-        //uint32_t formatBufferSize = static_cast<uint32_t>(msg.readableBytes())
-        //                            + static_cast<uint32_t>(info.format.size()) - 2;
-        //char formatBuffer[formatBufferSize];
-        //snprintf(formatBuffer, formatBufferSize, info.format.c_str(), msg.peek());
-        //formatBuffer[formatBufferSize - 1] = '\0';
-        //message.append(formatBuffer, formatBufferSize);
-        //LOG_TRACE << "Message: " << formatBuffer << ", topic:" << info.topicName
-        //          << ", partId: " << partId;
+        //message = msg;
+        uint32_t formatBufferSize = static_cast<uint32_t>(msg.readableBytes())
+                                    + static_cast<uint32_t>(info.format.size()) - 1;
+        std::unique_ptr<char[]> buffer(new char[formatBufferSize]);
+        snprintf(buffer.get(), formatBufferSize, info.format.c_str(), msg.peek());
+        // 去除尾部 snprintf 自动添加的 \0 字符
+        message.append(buffer.get(), formatBufferSize - 1);
     }
 
     return _message->setMessage(info.topicName, partId, message);

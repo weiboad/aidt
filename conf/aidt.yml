@@ -1,22 +1,6 @@
 # aidt config
 
-transfers:
-    - 
-     path: /usr/local/adinf/test_aidt_data/
-     is_dir: true
-     is_binary: false
-     is_recursive: false
-     time_wait: 3
-     format: '%s'
-     topic_name: adapi.biz.weibo.com.nginx
-         #- 
-         # path: /usr/local/adinf/adapi.biz.weibo.com/
-         # is_dir: true
-         # is_binary: false
-         # is_recursive: false
-         # time_wait: 3
-         # format: '%s'
-         # topic_name: adapi.biz.weibo.com.nginx
+transfers: ~
 #    - 
 #     path: /tmp/test2
 #     is_dir: true
