@@ -220,7 +220,7 @@ void Reader::readString(const InotifyEvent& event, const WatcherFileInfo& info, 
 
     std::filebuf* pbuf = item.fs->rdbuf();
     pbuf->pubseekpos(item.offset);
-    LOG_INFO << "file " << event.origfile << ", seek:" << item.offset;
+    LOG_TRACE << "file " << event.origfile << ", seek:" << item.offset;
 
     size_t readSize = 0;
     int lines = 0;
