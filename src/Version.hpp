@@ -4,7 +4,7 @@
 #define VERSION "1.0.5"
 #define SOVERSION "1"
 #define GIT_DIRTY "0"
-#define GIT_SHA1 "754c91aa"
-#define BUILD_ID "bpdev-1503037759"
-#define BUILD_TYPE "Release"
+#define GIT_SHA1 "6a54d81b"
+#define BUILD_ID "bpdev-1522545843"
+#define BUILD_TYPE "Debug"
 #endif

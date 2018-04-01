@@ -78,6 +78,14 @@ void Reader::clear(const InotifyEvent& event) {
 
 void Reader::moveself(const InotifyEvent& event) {
     _watcherConfig->setMoveTime(const_cast<std::string&>(event.pathfile), static_cast<uint32_t>(time(nullptr)));
+    {
+        std::lock_guard<std::mutex> lk(_mut);
+        if (_fdMap.find(event.origfile) != _fdMap.end()) {
+            FdItem& item = _fdMap[event.origfile];
+            item.moveProtected = true;
+        }
+    }
+    LOG_INFO << "Set file move time:" << static_cast<uint32_t>(time(nullptr));
 }
 
 // }}}
@@ -191,6 +199,7 @@ void Reader::load() {
         item.pathfile = pathFile;
         item.origfile = origFile;
         item.offset   = offset;
+        item.fs       = nullptr;
         _fdMap[origFile] = item;
         LOG_INFO << "Load origin file offset info, originFile: " << item.origfile
                  << ", pathFile: " << item.pathfile
@@ -348,6 +357,7 @@ bool Reader::initStream(const InotifyEvent& event, FdItem& item, const WatcherFi
         return false;
     }
 
+
     if (_aliasMap.find(tmpEvent.origfile) != _aliasMap.end()) {
         tmpEvent.origfile = _aliasMap[tmpEvent.origfile];
     }
@@ -359,7 +369,15 @@ bool Reader::initStream(const InotifyEvent& event, FdItem& item, const WatcherFi
         item.fs = nullptr;
     } else {
         item = _fdMap[tmpEvent.origfile];
+        if (info.moveTime != 0 && (currentTime - info.moveTime) > info.timeWait) { // 需要重新重置 offset
+            LOG_INFO << "File move timeout, need reset origfile info, timewait:" << info.timeWait;
+            item.offset = 0;
+            closeStream(item.fs);
+            item.moveProtected = false;
+        }
     }
+
+    
     item.fs = openStream(tmpEvent.origfile, info, item.fs);
     item.lastTime = currentTime;
     _fdMap[tmpEvent.origfile] = item;
