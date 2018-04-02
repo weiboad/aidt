@@ -287,7 +287,15 @@ bool Watcher::patternPathFile(std::string &originFile, WatcherFileInfo &info) {
 
 void Watcher::paserEvent(struct inotify_event *event) {
 	std::string origFile(inotifytools_filename_from_wd(event->wd));
+
+    std::string::size_type n = origFile.find_last_not_of("/");
+    if (n == std::string::npos) { // 不遍历根目录
+        origFile = "";
+    }
+    origFile = origFile.substr(0, n + 1);
+    origFile.append("/");
 	origFile.append(event->name);
+    LOG_TRACE << "Paser event origin file: " << origFile;
 	WatcherFileInfo info;
 	if (!patternPathFile(origFile, info)) {
 		return;
