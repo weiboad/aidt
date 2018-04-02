@@ -374,10 +374,10 @@ bool Reader::initStream(const InotifyEvent& event, FdItem& item, const WatcherFi
             item.offset = 0;
             closeStream(item.fs);
             item.moveProtected = false;
+            _watcherConfig->setMoveTime(const_cast<std::string&>(tmpEvent.origfile), 0);
         }
     }
 
-    
     item.fs = openStream(tmpEvent.origfile, info, item.fs);
     item.lastTime = currentTime;
     _fdMap[tmpEvent.origfile] = item;
