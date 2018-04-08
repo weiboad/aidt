@@ -19,10 +19,18 @@
 #endif
 #ifndef DECLARE_KAFKA_PRODUCER_CONFIG
 #define DECLARE_KAFKA_PRODUCER_CONFIG(name) \
-	std::string topicNameProducer##name;\
 	std::string brokerListProducer##name;\
 	std::string debug##name;\
-	int queueLength##name;
+	int queueLength##name; \
+    std::string securityProtocol;\
+    std::string saslMechanisms;\
+    std::string kerberosServiceName;\
+    std::string kerberosPrincipal;\
+    std::string kerberosCmd;\
+    std::string kerberosKeytab;\
+    std::string kerberosMinTime;\
+    std::string saslUsername;\
+    std::string saslPassword;
 #endif
 #ifndef DECLARE_TIMER_CONFIG
 #define DECLARE_TIMER_CONFIG(name) \

@@ -18,10 +18,18 @@
 } while(0)
 
 #define LOAD_KAFKA_PRODUCER_CONFIG(name, sectionName) do {\
-    _configure->topicNameProducer##name    = config.getOption("kafkap_"#sectionName, "topicName"#name);\
     _configure->brokerListProducer##name   = config.getOption("kafkap_"#sectionName, "brokerList"#name);\
     _configure->debug##name        = config.getOption("kafkap_"#sectionName, "debug"#name);\
     _configure->queueLength##name  = config.getOptionUint32("kafkap_"#sectionName, "queueLength"#name);\
+    _configure->securityProtocol = config.getOption("kafkap_"#sectionName, "securityProtocol");\
+    _configure->saslMechanisms = config.getOption("kafkap_"#sectionName, "saslMechanisms");\
+    _configure->kerberosServiceName = config.getOption("kafkap_"#sectionName, "kerberosServiceName");\
+    _configure->kerberosPrincipal = config.getOption("kafkap_"#sectionName, "kerberosPrincipal");\
+    _configure->kerberosCmd = config.getOption("kafkap_"#sectionName, "kerberosCmd");\
+    _configure->kerberosKeytab = config.getOption("kafkap_"#sectionName, "kerberosKeytab");\
+    _configure->kerberosMinTime = config.getOption("kafkap_"#sectionName, "kerberosMinTime");\
+    _configure->saslUsername = config.getOption("kafkap_"#sectionName, "saslUsername");\
+    _configure->saslPassword = config.getOption("kafkap_"#sectionName, "saslPassword");\
 } while(0)
 
 #define LOAD_TIMER_CONFIG(name) do {\
