@@ -8,6 +8,7 @@ Watcher::Watcher(AdbaseConfig* config, std::shared_ptr<app::Config>& watcherConf
     _configure(config),
     _watcherConfig(watcherConfig),
     _running(true),
+    _watcherNum(0),
     _eventThreadNumber(0) {
 }
 

@@ -14,6 +14,7 @@ Reader::Reader(std::shared_ptr<app::Config>& watcherConfig, App* app, AdbaseConf
     _message(message),
     _running(true) {
     _currentFdNum = 0;
+    _dataStore = std::shared_ptr<DataStore>(new DataStore(nullptr));
 }
 
 // }}}
@@ -113,37 +114,14 @@ void Reader::save() {
     bakPathName.append(".bak");
     std::ofstream ofs(pathName.c_str(), std::ofstream::trunc | std::ofstream::binary);
     for (auto &t : _fdMap) {
-        std::unordered_map<std::string, std::string> status;
-        struct stat fileStat;
-        if (0 != stat(t.second.origfile.c_str(), &fileStat) || !S_ISREG(fileStat.st_mode)) {
-            continue;
-        }
         WatcherFileInfo info;
         bool ret = _watcherConfig->findFile(const_cast<std::string&>(t.second.pathfile), info);
         if (!ret) {
             LOG_INFO << "Can't find pathFile " << t.second.pathfile << " in config manager";
             continue;
         }
-        uint64_t inode = static_cast<uint64_t>(fileStat.st_ino);
-        uint64_t filesize = static_cast<uint64_t>(fileStat.st_size);
 
-        status["transfer_id"] = std::to_string(info.id);
-        status["file_name"]   = t.second.origfile;
-        status["inode"]   = std::to_string(inode);
-        status["size"]    = std::to_string(t.second.offset);
-        status["total"]   = std::to_string(filesize);
-
-        adbase::Buffer buffer;
-        buffer.appendInt64(t.second.offset);
-        buffer.appendInt64(inode);
-        buffer.appendInt64(filesize);
-        buffer.appendInt32(static_cast<uint32_t>(t.second.pathfile.size()));
-        buffer.appendInt32(static_cast<uint32_t>(t.second.origfile.size()));
-        buffer.append(t.second.pathfile);
-        buffer.append(t.second.origfile);
-        LOG_TRACE << "Save fd pathfile: " << t.second.pathfile
-                  << ", originFile: " << t.second.origfile;
-        ofs.write(buffer.peek(), buffer.readableBytes());
+        _dataStore->saveOffset(&ofs, t.second);
     }
     ofs.flush();
     ofs.close();
@@ -161,51 +139,7 @@ void Reader::save() {
 
 void Reader::load() {
     std::lock_guard<std::mutex> lk(_mut);
-    std::ifstream ifs(_configure->offsetFile.c_str(), std::ios_base::in | std::ios_base::binary);
-    if (!ifs.good() || !ifs.is_open()) {
-        return;
-    }
-    while (true) {
-        adbase::Buffer loadBuffer;
-        uint32_t headerSize = 8 * static_cast<uint32_t>(sizeof(uint32_t));
-        char lenBuf[headerSize];
-        memset(lenBuf, 0, headerSize);
-        ifs.read(lenBuf, headerSize);
-        if (!ifs.good() || ifs.gcount() != headerSize) {
-            break;
-        }
-        loadBuffer.append(lenBuf, headerSize);
-
-        uint64_t offset = loadBuffer.readInt64();
-        loadBuffer.readInt64(); // inode
-        loadBuffer.readInt64(); // filesize
-        uint32_t pathFileSize = loadBuffer.readInt32();
-        uint32_t origFileSize = loadBuffer.readInt32();
-        char pathFileBuf[pathFileSize];
-        char origFileBuf[origFileSize];
-        memset(pathFileBuf, 0, pathFileSize);
-        memset(origFileBuf, 0, origFileSize);
-        ifs.read(pathFileBuf, pathFileSize);
-        if (!ifs.good() || ifs.gcount() != pathFileSize) {
-            break;
-        }
-        std::string pathFile(pathFileBuf, pathFileSize);
-        ifs.read(origFileBuf, origFileSize);
-        if (!ifs.good() || ifs.gcount() != origFileSize) {
-            break;
-        }
-        std::string origFile(origFileBuf, origFileSize);
-        FdItem item;
-        item.pathfile = pathFile;
-        item.origfile = origFile;
-        item.offset   = offset;
-        item.fs       = nullptr;
-        _fdMap[origFile] = item;
-        LOG_INFO << "Load origin file offset info, originFile: " << item.origfile
-                 << ", pathFile: " << item.pathfile
-                 << ", offset: "   << item.offset;
-    }
-    ifs.close();
+    _dataStore->loadOffsets(_configure->offsetFile, _fdMap);
 }
 
 // }}}

@@ -14,6 +14,7 @@ public:
 	App(AdbaseConfig* config);
 	~App();
 	void reload();
+	void resend();
 	void run();
 	void stop();
 	void setAdServerContext(AdServerContext* context);

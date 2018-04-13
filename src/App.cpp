@@ -87,6 +87,15 @@ void App::reload() {
 }
 
 // }}}
+// {{{ void App::resend()
+
+void App::resend() {
+    if (_message) {
+        _message->loadMessage();
+    }
+}
+
+// }}}
 // {{{ void App::stop()
 
 void App::stop() {

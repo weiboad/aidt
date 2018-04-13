@@ -1,9 +1,9 @@
 /// 该程序自动生成，禁止修改
-#include "BootStrap.hpp"
+#include "BootStrapCli.hpp"
 // {{{ global
 
 // 引导程序
-BootStrap* bootMain;
+BootStrapCli* bootMain;
 
 // }}}
 // {{{ static void killSignal()
@@ -13,24 +13,6 @@ static void killSignal(const int sig) {
 		bootMain->stop(sig);
         delete bootMain;
 	}
-}
-
-// }}}
-// {{{ static void reloadConf()
-
-static void reloadConf(const int sig) {
-	(void)sig;
-	LOG_ERROR << "Start reload config...";
-	bootMain->reload();
-}
-
-// }}}
-// {{{ static void resend()
-
-static void resend(const int sig) {
-	(void)sig;
-	LOG_ERROR << "Start resend message...";
-	bootMain->resend();
 }
 
 // }}}
@@ -46,8 +28,6 @@ static void registerSignal() {
 	signal(SIGTERM, killSignal);
 	signal(SIGHUP,  killSignal);
 	signal(SIGSEGV, killSignal);
-	signal(SIGUSR1, reloadConf);
-	signal(SIGUSR2, resend);
 }
 
 // }}}
@@ -56,7 +36,7 @@ static void registerSignal() {
 int main(int argc, char **argv) {
 	try {
 		// 初始化 BootStrap
-		bootMain = new BootStrap();
+		bootMain = new BootStrapCli();
 		bootMain->init(argc, argv);
 		// 注册信号处理
 		registerSignal();

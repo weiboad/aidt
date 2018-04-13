@@ -1,25 +1,15 @@
 #ifndef AIDT_READER_HPP_
 #define AIDT_READER_HPP_
 
+#include <cstdio>
+#include <fstream>
 #include <adbase/Utility.hpp>
 #include "AdbaseConfig.hpp"
 #include "App/Config.hpp"
-#include <cstdio>
-#include <fstream>
+#include "App/DataStore.hpp"
 
 class App;
 namespace app {
-
-typedef struct FdItem {
-	std::string pathfile;
-	std::string origfile;
-	uint64_t offset;
-	int lastTime;
-	bool moveProtected; // 是否处于保护期，如果处于文件保护状态在gc过程中保留
-    std::fstream *fs;
-} FdItem;
-typedef std::unordered_map<std::string, FdItem> FdMap;
-
 class Message;
 class InotifyEvent;
 class Reader {
@@ -39,6 +29,7 @@ private:
     std::shared_ptr<app::Config>& _watcherConfig;
     App *_app;
     std::shared_ptr<app::Message>& _message;
+    std::shared_ptr<app::DataStore> _dataStore;
 	mutable std::mutex _mut;
 	FdMap _fdMap; 
 	std::unordered_map<std::string, std::string> _aliasMap;

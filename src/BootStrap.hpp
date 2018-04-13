@@ -20,6 +20,7 @@ public:
 	void init(int argc, char **argv);
 	void run();
 	void reload();
+	void resend();
 	void stop(const int sig);
 	AdbaseConfig* getConfig();
 

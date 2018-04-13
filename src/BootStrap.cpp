@@ -100,6 +100,13 @@ void BootStrap::reload() {
 }
 
 // }}}
+// {{{ void BootStrap::resend()
+
+void BootStrap::resend() {
+	_app->resend();
+}
+
+// }}}
 // {{{ void BootStrap::stop()
 
 void BootStrap::stop(const int sig) {

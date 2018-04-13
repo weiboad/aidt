@@ -9,17 +9,9 @@
 #include <thread>
 #include <limits.h>
 #include "AdbaseConfig.hpp"
+#include "DataStore.hpp"
 
 namespace app {
-// message queue
-typedef struct MessageItem {
-    int partId;
-    int tryNum;
-    std::string topicName;
-    adbase::Buffer message;
-} MessageItem;
-typedef adbase::Queue<MessageItem> MessageQueue;
-
 class Message {
 public:
 	Message(AdbaseConfig* configure);
@@ -34,9 +26,8 @@ private:
 	AdbaseConfig *_configure;
 	MessageQueue _queue;
 	adbase::metrics::Meters* _setRate    = nullptr;
-	uint64_t _index; // no thread safe
 	mutable std::mutex _mut;
-	void serialize(adbase::Buffer& buffer, MessageItem& item);
+    std::shared_ptr<DataStore> _dataStore;
 };
 }
 #endif
